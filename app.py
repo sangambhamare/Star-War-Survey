@@ -127,6 +127,11 @@ with main_tabs[0]:
     # --- Tab 5: Final Cleaned Data ---
     with cleaning_tabs[4]:
         st.header("Final Cleaned Data Preview")
+        # Force known categorical columns to be of type 'string' for Arrow compatibility
+        categorical_cols = ["seen_films", "is_fan", "films_seen", "character_opinions"]
+        for col in categorical_cols:
+            if col in df_clean.columns:
+                df_clean[col] = df_clean[col].astype("string")
         st.dataframe(df_clean.head(10))
         st.subheader("Data Information")
         st.dataframe(get_df_info(df_clean))
@@ -274,7 +279,7 @@ with main_tabs[2]:
     categorical_cols = ["seen_films", "is_fan", "films_seen", "character_opinions"]
     for col in categorical_cols:
         if col in df_clean.columns:
-            df_clean[col] = df_clean[col].astype(str)
+            df_clean[col] = df_clean[col].astype("string")
     
     # Start with the cleaned data
     df_filtered = df_clean.copy()
