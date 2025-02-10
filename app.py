@@ -16,7 +16,7 @@ def load_data(filepath: str) -> pd.DataFrame:
     return df
 
 # Change the path to your data file
-data_path = "starwars_survey.csv"
+data_path = "star_wars.csv"
 df_raw = load_data(data_path)
 
 # Create a copy for cleaning
