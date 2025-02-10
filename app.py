@@ -10,6 +10,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score, roc_curve, auc
 
 # -------------------------
+# Disable Arrow-based DataFrame Serialization
+# -------------------------
+st.set_option('client.dataFrameSerialization', 'legacy')
+
+# -------------------------
 # Page Configuration
 # -------------------------
 st.set_page_config(
@@ -131,7 +136,7 @@ with main_tabs[0]:
     # --- Final Cleaned Data ---
     with cleaning_tabs[4]:
         st.subheader("Final Cleaned Data (Preview)")
-        # Convert all object columns to string to ensure Arrow compatibility
+        # Convert all object columns to string to ensure compatibility with legacy serialization
         for col in df_clean.select_dtypes(include=["object"]).columns:
             df_clean[col] = df_clean[col].astype("string")
         st.dataframe(df_clean.head(10))
@@ -277,7 +282,6 @@ with main_tabs[3]:
             if selected_predictors:
                 X = df_model[selected_predictors].dropna()
                 y = df_model.loc[X.index, "is_fan_binary"]
-                from sklearn.model_selection import train_test_split
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
                 model = LogisticRegression(max_iter=1000)
                 model.fit(X_train, y_train)
