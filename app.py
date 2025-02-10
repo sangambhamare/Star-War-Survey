@@ -10,11 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score, roc_curve, auc
 
 # -------------------------
-# Disable Arrow-based DataFrame Serialization
-# -------------------------
-st.set_option('client.dataFrameSerialization', 'legacy')
-
-# -------------------------
 # Page Configuration
 # -------------------------
 st.set_page_config(
@@ -42,10 +37,10 @@ def get_df_info(df: pd.DataFrame) -> pd.DataFrame:
     info_df["Memory Usage (Bytes)"] = mem_usage.values
     return info_df
 
-@st.cache_data
 def load_data(filepath: str) -> pd.DataFrame:
     """
     Loads a CSV file. First tries a tab delimiter; if only one column is found, it retries using a comma.
+    (Caching has been removed to avoid using pyarrow.)
     """
     try:
         df = pd.read_csv(filepath, delimiter="\t")
@@ -136,7 +131,7 @@ with main_tabs[0]:
     # --- Final Cleaned Data ---
     with cleaning_tabs[4]:
         st.subheader("Final Cleaned Data (Preview)")
-        # Convert all object columns to string to ensure compatibility with legacy serialization
+        # Convert all object columns to string to ensure compatibility
         for col in df_clean.select_dtypes(include=["object"]).columns:
             df_clean[col] = df_clean[col].astype("string")
         st.dataframe(df_clean.head(10))
