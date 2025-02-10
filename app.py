@@ -69,10 +69,9 @@ main_tab_labels = [
     "Data Cleaning",
     "Basic Visualization",
     "Basic Statistical Reports",
-    "Clustering & Predictive Modeling",
     "Enhanced Dashboard & Export",
     "Geospatial Visualization",
-    "User Guide & Feedback"
+    "User Guide"
 ]
 main_tabs = st.tabs(main_tab_labels)
 
@@ -243,68 +242,9 @@ with main_tabs[2]:
         st.pyplot(fig)
 
 # =========================
-# TAB 4: Clustering & Predictive Modeling
+# TAB 4: Enhanced Dashboard & Export
 # =========================
 with main_tabs[3]:
-    st.header("Clustering & Predictive Modeling")
-    # --- Clustering ---
-    if len(numeric_cols) >= 2:
-        st.subheader("KMeans Clustering")
-        x_cluster = st.selectbox("Select X Variable for Clustering", options=numeric_cols)
-        default_y_cluster = numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0]
-        y_cluster = st.selectbox("Select Y Variable for Clustering", options=numeric_cols, index=list(numeric_cols).index(default_y_cluster))
-        k = st.slider("Number of Clusters", min_value=2, max_value=10, value=3)
-        cluster_data = df_clean[[x_cluster, y_cluster]].dropna().copy()
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        cluster_data["cluster"] = kmeans.fit_predict(cluster_data)
-        cluster_chart = alt.Chart(cluster_data.reset_index()).mark_circle(size=60).encode(
-            x=alt.X(f"{x_cluster}:Q"),
-            y=alt.Y(f"{y_cluster}:Q"),
-            color="cluster:N",
-            tooltip=[x_cluster, y_cluster, "cluster"]
-        ).properties(title="KMeans Clustering", width=600, height=400)
-        st.altair_chart(cluster_chart, use_container_width=True)
-    else:
-        st.write("Not enough numeric columns for clustering.")
-    # --- Predictive Modeling ---
-    if "is_fan" in df_clean.columns:
-        st.subheader("Predictive Modeling: Logistic Regression")
-        df_model = df_clean.copy().dropna(subset=["is_fan"])
-        df_model["is_fan_binary"] = df_model["is_fan"].apply(lambda x: 1 if str(x).strip().lower() == "yes" else 0)
-        predictors = list(df_model.select_dtypes(include=["number"]).columns)
-        if predictors:
-            selected_predictors = st.multiselect("Select Predictors", options=predictors, default=predictors)
-            if selected_predictors:
-                X = df_model[selected_predictors].dropna()
-                y = df_model.loc[X.index, "is_fan_binary"]
-                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
-                model = LogisticRegression(max_iter=1000)
-                model.fit(X_train, y_train)
-                y_pred = model.predict(X_test)
-                acc = accuracy_score(y_test, y_pred)
-                st.write(f"**Accuracy:** {acc:.2f}")
-                st.text("Classification Report:")
-                st.text(classification_report(y_test, y_pred))
-                y_prob = model.predict_proba(X_test)[:, 1]
-                fpr, tpr, _ = roc_curve(y_test, y_prob)
-                roc_auc = auc(fpr, tpr)
-                fig, ax = plt.subplots()
-                ax.plot(fpr, tpr, label=f"ROC curve (area = {roc_auc:.2f})")
-                ax.plot([0, 1], [0, 1], linestyle="--", color="gray")
-                ax.set_xlabel("False Positive Rate")
-                ax.set_ylabel("True Positive Rate")
-                ax.set_title("ROC Curve")
-                ax.legend()
-                st.pyplot(fig)
-        else:
-            st.write("No numeric predictors available for predictive modeling.")
-    else:
-        st.write("Column 'is_fan' not found.")
-
-# =========================
-# TAB 5: Enhanced Dashboard & Export
-# =========================
-with main_tabs[4]:
     st.header("Enhanced Dashboard & Data Export")
     df_dashboard = df_clean.copy()
     if "Gender" in df_dashboard.columns:
@@ -326,9 +266,9 @@ with main_tabs[4]:
     )
 
 # =========================
-# TAB 6: Geospatial Visualization
+# TAB 5: Geospatial Visualization
 # =========================
-with main_tabs[5]:
+with main_tabs[4]:
     st.header("Geospatial Visualization")
     if "Location (Census Region)" in df_clean.columns:
         # Dummy coordinates for known Census Regions
@@ -352,21 +292,17 @@ with main_tabs[5]:
         st.write("No 'Location (Census Region)' column found.")
 
 # =========================
-# TAB 7: User Guide & Feedback
+# TAB 6: User Guide
 # =========================
-with main_tabs[6]:
-    st.header("User Guide & Feedback")
+with main_tabs[5]:
+    st.header("User Guide")
     st.markdown("""
     ### User Guide
     - **Data Cleaning:** Clean your survey data by dropping extraneous columns, renaming verbose columns, and handling missing values.
     - **Basic Visualization:** Explore initial charts on fan status, film viewing, demographics, film ranking, and character opinions.
     - **Basic Statistical Reports:** View descriptive statistics and histograms for numeric variables.
-    - **Clustering & Predictive Modeling:** Perform KMeans clustering and build a logistic regression model to predict fan status.
     - **Enhanced Dashboard & Export:** Apply filters and download the resulting data as CSV.
     - **Geospatial Visualization:** Visualize survey responses by mapping Census Regions.
-    - **User Guide & Feedback:** Read instructions and submit your feedback.
     """)
-    feedback = st.text_area("Your Feedback:", "")
-    if st.button("Submit Feedback"):
-        st.success("Thank you for your feedback!")
-        # Optionally, you could log the feedback to a file or database.
+    
+st.markdown("#### Developed by Mr. Sangam S Bhamare 2025")
