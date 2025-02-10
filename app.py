@@ -1,21 +1,31 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+from scipy.stats import linregress
+from sklearn.cluster import KMeans
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report, accuracy_score, roc_curve, auc
 
-# Set page configuration
+# -------------------------
+# Page Configuration
+# -------------------------
 st.set_page_config(
-    page_title="Star Wars Data Cleaning, Visualization & Exploration",
+    page_title="Star Wars Survey Dashboard",
     layout="wide"
 )
-st.title("Star Wars Survey Data Cleaning, Visualization & Exploration App")
+st.title("Star Wars Survey: Data Cleaning, Visualization & Analysis")
 
-# =============================================================================
-# Helper Function: Get DataFrame Information in Tabular Format
-# =============================================================================
+# -------------------------
+# Helper Functions
+# -------------------------
 def get_df_info(df: pd.DataFrame) -> pd.DataFrame:
     """
-    Returns a DataFrame summarizing the input DataFrame's information:
-    Column, Non-Null Count, Null Count, % Missing, Data Type, and Memory Usage.
+    Returns a DataFrame summarizing the input DataFrame's info.
+    Columns include: Column name, Non-Null Count, Null Count, % Missing, Data Type, and Memory Usage.
     """
     info_df = pd.DataFrame({
         "Column": df.columns,
@@ -28,14 +38,10 @@ def get_df_info(df: pd.DataFrame) -> pd.DataFrame:
     info_df["Memory Usage (Bytes)"] = mem_usage.values
     return info_df
 
-# =============================================================================
-# Helper Function: Load CSV File
-# =============================================================================
 @st.cache_data
 def load_data(filepath: str) -> pd.DataFrame:
     """
-    Attempts to load a CSV file using a tab delimiter first.
-    If the resulting DataFrame has only one column, it retries using a comma delimiter.
+    Loads a CSV file. First tries a tab delimiter; if only one column is found, it retries using a comma.
     """
     try:
         df = pd.read_csv(filepath, delimiter="\t")
@@ -46,55 +52,61 @@ def load_data(filepath: str) -> pd.DataFrame:
         return None
     return df
 
-# =============================================================================
-# Load Data from "star_wars.csv"
-# =============================================================================
+# -------------------------
+# Load Data
+# -------------------------
 data_path = "star_wars.csv"
 df_raw = load_data(data_path)
 if df_raw is None:
     st.stop()
 
-# Create a copy for cleaning and further processing
+# Work on a copy for cleaning and further analysis
 df_clean = df_raw.copy()
 
-# =============================================================================
-# Main Tabs: Data Cleaning, Data Visualization, and Data Exploration
-# =============================================================================
-main_tabs = st.tabs(["Data Cleaning", "Data Visualization", "Data Exploration"])
+# -------------------------
+# Main Tabs
+# -------------------------
+main_tab_labels = [
+    "Data Cleaning",
+    "Basic Visualization",
+    "Interactive Data Exploration",
+    "Advanced Statistical Analysis",
+    "Clustering & Predictive Modeling",
+    "Enhanced Dashboard & Export",
+    "Geospatial Visualization",
+    "User Guide & Feedback"
+]
+main_tabs = st.tabs(main_tab_labels)
 
-# -----------------------------------------------------------------------------
-# Data Cleaning Tab
-# -----------------------------------------------------------------------------
+# =========================
+# TAB 1: Data Cleaning
+# =========================
 with main_tabs[0]:
+    st.header("Data Cleaning")
     cleaning_tabs = st.tabs([
-        "1. Original Data",
-        "2. Drop Unwanted Columns",
-        "3. Rename Columns",
-        "4. Handle Missing Data",
-        "5. Final Cleaned Data"
+        "Original Data",
+        "Drop Unwanted Columns",
+        "Rename Columns",
+        "Handle Missing Data",
+        "Final Cleaned Data"
     ])
-    
-    # --- Tab 1: Original Data ---
+    # --- Original Data ---
     with cleaning_tabs[0]:
-        st.header("Original Data")
-        st.write("Below are the first 10 rows of the raw data:")
+        st.subheader("Original Data (First 10 Rows)")
         st.dataframe(df_raw.head(10))
-        st.subheader("Data Information")
+        st.markdown("#### Data Information")
         st.dataframe(get_df_info(df_raw))
-    
-    # --- Tab 2: Drop Unwanted Columns ---
+    # --- Drop Unwanted Columns ---
     with cleaning_tabs[1]:
-        st.header("Drop Unwanted Columns")
-        # Identify columns that start with 'Unnamed' (often extra or blank columns)
+        st.subheader("Drop Unwanted Columns")
+        # Drop columns that start with "Unnamed"
         unnamed_cols = [col for col in df_clean.columns if col.startswith("Unnamed")]
         st.write("Columns to drop:", unnamed_cols)
         df_clean = df_clean.drop(columns=unnamed_cols)
-        st.write("Data after dropping unwanted columns (first 10 rows):")
         st.dataframe(df_clean.head(10))
-    
-    # --- Tab 3: Rename Columns ---
+    # --- Rename Columns ---
     with cleaning_tabs[2]:
-        st.header("Rename Columns")
+        st.subheader("Rename Columns")
         rename_mapping = {
             "Have you seen any of the 6 films in the Star Wars franchise?": "seen_films",
             "Do you consider yourself to be a fan of the Star Wars film franchise?": "is_fan",
@@ -102,46 +114,46 @@ with main_tabs[0]:
             "Please rank the Star Wars films in order of preference with 1 being your favorite film in the franchise and 6 being your least favorite film.": "film_ranking",
             "Please state whether you view the following characters favorably, unfavorably, or are unfamiliar with him/her.": "character_opinions",
         }
-        st.write("Renaming columns using the following mapping:")
+        st.write("Renaming using the following mapping:")
         st.write(rename_mapping)
         df_clean = df_clean.rename(columns={k: v for k, v in rename_mapping.items() if k in df_clean.columns})
-        st.write("Data with renamed columns (first 10 rows):")
         st.dataframe(df_clean.head(10))
-    
-    # --- Tab 4: Handle Missing Data ---
+    # --- Handle Missing Data ---
     with cleaning_tabs[3]:
-        st.header("Handle Missing Data")
-        st.subheader("Missing Data Counts")
+        st.subheader("Handle Missing Data")
+        st.markdown("##### Missing Data Counts")
         missing_counts = df_clean.isna().sum()
         st.dataframe(missing_counts.to_frame("Missing Count"))
-        st.write("Handling missing values:")
+        st.write("Filling missing values:")
         for col in df_clean.columns:
             if pd.api.types.is_numeric_dtype(df_clean[col]):
-                median_val = df_clean[col].median()
-                df_clean[col] = df_clean[col].fillna(median_val)
+                df_clean[col] = df_clean[col].fillna(df_clean[col].median())
             else:
                 df_clean[col] = df_clean[col].fillna("Not Specified")
-        st.write("Data after handling missing values (first 10 rows):")
         st.dataframe(df_clean.head(10))
-    
-    # --- Tab 5: Final Cleaned Data ---
+    # --- Final Cleaned Data ---
     with cleaning_tabs[4]:
-        st.header("Final Cleaned Data Preview")
-        # Force all object columns to string so that pyarrow infers a proper type.
+        st.subheader("Final Cleaned Data (Preview)")
+        # Convert all object columns to string to ensure Arrow compatibility
         for col in df_clean.select_dtypes(include=["object"]).columns:
             df_clean[col] = df_clean[col].astype("string")
         st.dataframe(df_clean.head(10))
-        st.subheader("Data Information")
+        st.markdown("#### Data Information")
         st.dataframe(get_df_info(df_clean))
 
-# -----------------------------------------------------------------------------
-# Data Visualization Tab
-# -----------------------------------------------------------------------------
+# =========================
+# TAB 2: Basic Visualization
+# =========================
 with main_tabs[1]:
-    st.header("Data Visualization")
-    vis_tabs = st.tabs(["Fan Analysis", "Film Viewing", "Demographics", "Film Ranking", "Character Opinions"])
-    
-    # --- Sub-tab: Fan Analysis ---
+    st.header("Basic Data Visualization")
+    vis_tabs = st.tabs([
+        "Fan Analysis",
+        "Film Viewing",
+        "Demographics",
+        "Film Ranking",
+        "Character Opinions"
+    ])
+    # --- Fan Analysis ---
     with vis_tabs[0]:
         st.subheader("Fan Analysis")
         if 'is_fan' in df_clean.columns:
@@ -154,9 +166,8 @@ with main_tabs[1]:
             ).properties(title="Fan Status Distribution", width=600, height=400)
             st.altair_chart(chart, use_container_width=True)
         else:
-            st.write("Column 'is_fan' not found in the data.")
-    
-    # --- Sub-tab: Film Viewing ---
+            st.write("Column 'is_fan' not found.")
+    # --- Film Viewing ---
     with vis_tabs[1]:
         st.subheader("Film Viewing Analysis")
         if 'seen_films' in df_clean.columns:
@@ -169,72 +180,23 @@ with main_tabs[1]:
             ).properties(title="Film Viewing Distribution", width=600, height=400)
             st.altair_chart(chart, use_container_width=True)
         else:
-            st.write("Column 'seen_films' not found in the data.")
-    
-    # --- Sub-tab: Demographics ---
+            st.write("Column 'seen_films' not found.")
+    # --- Demographics ---
     with vis_tabs[2]:
         st.subheader("Demographics Analysis")
-        if 'Gender' in df_clean.columns:
-            gender_counts = df_clean['Gender'].value_counts().reset_index()
-            gender_counts.columns = ['Gender', 'count']
-            gender_chart = alt.Chart(gender_counts).mark_bar().encode(
-                x=alt.X('Gender:N', title='Gender'),
-                y=alt.Y('count:Q', title='Count'),
-                tooltip=['Gender', 'count']
-            ).properties(title="Gender Distribution", width=300, height=300)
-            st.altair_chart(gender_chart, use_container_width=True)
-        else:
-            st.write("Column 'Gender' not found.")
-        
-        if 'Age' in df_clean.columns:
-            age_counts = df_clean['Age'].value_counts().reset_index()
-            age_counts.columns = ['Age', 'count']
-            age_chart = alt.Chart(age_counts).mark_bar().encode(
-                x=alt.X('Age:N', title='Age'),
-                y=alt.Y('count:Q', title='Count'),
-                tooltip=['Age', 'count']
-            ).properties(title="Age Distribution", width=300, height=300)
-            st.altair_chart(age_chart, use_container_width=True)
-        else:
-            st.write("Column 'Age' not found.")
-        
-        if 'Household Income' in df_clean.columns:
-            income_counts = df_clean['Household Income'].value_counts().reset_index()
-            income_counts.columns = ['Household Income', 'count']
-            income_chart = alt.Chart(income_counts).mark_bar().encode(
-                x=alt.X('Household Income:N', title='Household Income'),
-                y=alt.Y('count:Q', title='Count'),
-                tooltip=['Household Income', 'count']
-            ).properties(title="Household Income Distribution", width=300, height=300)
-            st.altair_chart(income_chart, use_container_width=True)
-        else:
-            st.write("Column 'Household Income' not found.")
-        
-        if 'Education' in df_clean.columns:
-            education_counts = df_clean['Education'].value_counts().reset_index()
-            education_counts.columns = ['Education', 'count']
-            education_chart = alt.Chart(education_counts).mark_bar().encode(
-                x=alt.X('Education:N', title='Education'),
-                y=alt.Y('count:Q', title='Count'),
-                tooltip=['Education', 'count']
-            ).properties(title="Education Distribution", width=300, height=300)
-            st.altair_chart(education_chart, use_container_width=True)
-        else:
-            st.write("Column 'Education' not found.")
-        
-        if 'Location (Census Region)' in df_clean.columns:
-            location_counts = df_clean['Location (Census Region)'].value_counts().reset_index()
-            location_counts.columns = ['Location (Census Region)', 'count']
-            location_chart = alt.Chart(location_counts).mark_bar().encode(
-                x=alt.X('Location (Census Region):N', title='Location (Census Region)'),
-                y=alt.Y('count:Q', title='Count'),
-                tooltip=['Location (Census Region)', 'count']
-            ).properties(title="Location Distribution", width=300, height=300)
-            st.altair_chart(location_chart, use_container_width=True)
-        else:
-            st.write("Column 'Location (Census Region)' not found.")
-    
-    # --- Sub-tab: Film Ranking ---
+        for col in ["Gender", "Age", "Household Income", "Education", "Location (Census Region)"]:
+            if col in df_clean.columns:
+                counts = df_clean[col].value_counts().reset_index()
+                counts.columns = [col, "count"]
+                chart = alt.Chart(counts).mark_bar().encode(
+                    x=alt.X(f"{col}:N", title=col),
+                    y=alt.Y("count:Q", title="Count"),
+                    tooltip=[col, "count"]
+                ).properties(title=f"{col} Distribution", width=300, height=300)
+                st.altair_chart(chart, use_container_width=True)
+            else:
+                st.write(f"Column '{col}' not found.")
+    # --- Film Ranking ---
     with vis_tabs[3]:
         st.subheader("Film Ranking Analysis")
         if 'film_ranking' in df_clean.columns:
@@ -247,86 +209,210 @@ with main_tabs[1]:
                 ).properties(title="Film Ranking Histogram", width=600, height=400)
                 st.altair_chart(ranking_chart, use_container_width=True)
             except Exception as e:
-                st.write(f"Error converting film_ranking to numeric: {e}")
+                st.write(f"Error: {e}")
         else:
-            st.write("Column 'film_ranking' not found in the data.")
-    
-    # --- Sub-tab: Character Opinions ---
+            st.write("Column 'film_ranking' not found.")
+    # --- Character Opinions ---
     with vis_tabs[4]:
         st.subheader("Character Opinions Analysis")
         if 'character_opinions' in df_clean.columns:
-            opinion_counts = df_clean['character_opinions'].value_counts().reset_index()
-            opinion_counts.columns = ['character_opinions', 'count']
-            opinion_chart = alt.Chart(opinion_counts).mark_bar().encode(
+            opinions = df_clean['character_opinions'].value_counts().reset_index()
+            opinions.columns = ['character_opinions', 'count']
+            opinion_chart = alt.Chart(opinions).mark_bar().encode(
                 x=alt.X('character_opinions:N', title='Character Opinion'),
                 y=alt.Y('count:Q', title='Count'),
                 tooltip=['character_opinions', 'count']
             ).properties(title="Character Opinions Distribution", width=600, height=400)
             st.altair_chart(opinion_chart, use_container_width=True)
         else:
-            st.write("Column 'character_opinions' not found in the data.")
+            st.write("Column 'character_opinions' not found.")
 
-# -----------------------------------------------------------------------------
-# Data Exploration Tab: Interactive Filtering & Advanced Statistical Analysis
-# -----------------------------------------------------------------------------
+# =========================
+# TAB 3: Interactive Data Exploration
+# =========================
 with main_tabs[2]:
-    st.header("Interactive Data Filtering & Advanced Statistical Analysis")
-    st.markdown("### Filter the Data")
-    
-    # Again, force all object columns to be string to ensure Arrow compatibility.
-    for col in df_clean.select_dtypes(include=["object"]).columns:
-        df_clean[col] = df_clean[col].astype("string")
-    
-    # Start with the cleaned data
-    df_filtered = df_clean.copy()
-    
-    # Filter by Gender
-    if "Gender" in df_filtered.columns:
-        genders = sorted(df_filtered["Gender"].unique().tolist())
+    st.header("Interactive Data Exploration")
+    df_explore = df_clean.copy()
+    # Example filters (you can expand as needed)
+    if "Gender" in df_explore.columns:
+        genders = sorted(df_explore["Gender"].unique().tolist())
         selected_genders = st.multiselect("Select Gender(s):", options=genders, default=genders)
-        df_filtered = df_filtered[df_filtered["Gender"].isin(selected_genders)]
-    
-    # Filter by Age
-    if "Age" in df_filtered.columns:
-        ages = sorted(df_filtered["Age"].unique().tolist())
+        df_explore = df_explore[df_explore["Gender"].isin(selected_genders)]
+    if "Age" in df_explore.columns:
+        ages = sorted(df_explore["Age"].unique().tolist())
         selected_ages = st.multiselect("Select Age Group(s):", options=ages, default=ages)
-        df_filtered = df_filtered[df_filtered["Age"].isin(selected_ages)]
-    
-    # Filter by Household Income
-    if "Household Income" in df_filtered.columns:
-        incomes = sorted(df_filtered["Household Income"].unique().tolist())
-        selected_incomes = st.multiselect("Select Household Income:", options=incomes, default=incomes)
-        df_filtered = df_filtered[df_filtered["Household Income"].isin(selected_incomes)]
-    
-    # Filter by Education
-    if "Education" in df_filtered.columns:
-        educations = sorted(df_filtered["Education"].unique().tolist())
-        selected_educations = st.multiselect("Select Education Level(s):", options=educations, default=educations)
-        df_filtered = df_filtered[df_filtered["Education"].isin(selected_educations)]
-    
-    # Filter by Fan Status
-    if "is_fan" in df_filtered.columns:
-        fan_status = sorted(df_filtered["is_fan"].unique().tolist())
-        selected_fan_status = st.multiselect("Select Fan Status:", options=fan_status, default=fan_status)
-        df_filtered = df_filtered[df_filtered["is_fan"].isin(selected_fan_status)]
-    
-    st.markdown("### Filtered Data")
-    st.dataframe(df_filtered)
-    
-    st.markdown("### Descriptive Statistics")
-    st.dataframe(df_filtered.describe(include='all'))
-    
-    st.markdown("### Correlation Analysis")
-    numeric_cols = df_filtered.select_dtypes(include=["number"]).columns
+        df_explore = df_explore[df_explore["Age"].isin(selected_ages)]
+    st.markdown("#### Filtered Data")
+    st.dataframe(df_explore)
+    st.markdown("#### Descriptive Statistics")
+    st.dataframe(df_explore.describe(include='all'))
+
+# =========================
+# TAB 4: Advanced Statistical Analysis
+# =========================
+with main_tabs[3]:
+    st.header("Advanced Statistical Analysis")
+    # --- Pairplot for Numeric Variables ---
+    numeric_cols = df_clean.select_dtypes(include=["number"]).columns
     if len(numeric_cols) >= 2:
-        corr_df = df_filtered[numeric_cols].corr().reset_index().melt(id_vars='index')
-        corr_df.columns = ['Variable 1', 'Variable 2', 'Correlation']
-        heatmap = alt.Chart(corr_df).mark_rect().encode(
-            x=alt.X('Variable 1:N', title=None),
-            y=alt.Y('Variable 2:N', title=None),
-            color=alt.Color('Correlation:Q', scale=alt.Scale(scheme='blueorange')),
-            tooltip=['Variable 1', 'Variable 2', 'Correlation']
-        ).properties(title="Correlation Heatmap", width=500, height=500)
-        st.altair_chart(heatmap, use_container_width=True)
+        st.subheader("Scatter Plot Matrix")
+        pair_grid = sns.pairplot(df_clean[numeric_cols].dropna())
+        st.pyplot(pair_grid.fig)
     else:
-        st.write("Not enough numeric columns for correlation analysis.")
+        st.write("Not enough numeric columns for a pairplot.")
+    # --- Regression Analysis ---
+    if len(numeric_cols) >= 2:
+        st.subheader("Linear Regression Analysis")
+        x_col = st.selectbox("Select X Variable", options=numeric_cols)
+        # Ensure a different default for y
+        default_y = numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0]
+        y_col = st.selectbox("Select Y Variable", options=numeric_cols, index=list(numeric_cols).index(default_y))
+        if x_col and y_col and x_col != y_col:
+            # Compute linear regression
+            res = linregress(df_clean[x_col].dropna(), df_clean[y_col].dropna())
+            st.write(f"**Slope:** {res.slope:.2f}, **Intercept:** {res.intercept:.2f}, **R-squared:** {res.rvalue**2:.2f}")
+            # Plot scatter with regression line
+            fig, ax = plt.subplots()
+            ax.scatter(df_clean[x_col], df_clean[y_col], alpha=0.5)
+            x_vals = np.array(ax.get_xlim())
+            y_vals = res.intercept + res.slope * x_vals
+            ax.plot(x_vals, y_vals, color="red", linestyle="--")
+            ax.set_xlabel(x_col)
+            ax.set_ylabel(y_col)
+            ax.set_title(f"Regression: {y_col} vs {x_col}")
+            st.pyplot(fig)
+    else:
+        st.write("Not enough numeric columns for regression analysis.")
+
+# =========================
+# TAB 5: Clustering & Predictive Modeling
+# =========================
+with main_tabs[4]:
+    st.header("Clustering & Predictive Modeling")
+    # --- Clustering ---
+    if len(numeric_cols) >= 2:
+        st.subheader("KMeans Clustering")
+        x_cluster = st.selectbox("Select X Variable for Clustering", options=numeric_cols)
+        default_y_cluster = numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0]
+        y_cluster = st.selectbox("Select Y Variable for Clustering", options=numeric_cols, index=list(numeric_cols).index(default_y_cluster))
+        k = st.slider("Number of Clusters", min_value=2, max_value=10, value=3)
+        cluster_data = df_clean[[x_cluster, y_cluster]].dropna().copy()
+        kmeans = KMeans(n_clusters=k, random_state=42)
+        cluster_data["cluster"] = kmeans.fit_predict(cluster_data)
+        cluster_chart = alt.Chart(cluster_data.reset_index()).mark_circle(size=60).encode(
+            x=alt.X(f"{x_cluster}:Q"),
+            y=alt.Y(f"{y_cluster}:Q"),
+            color="cluster:N",
+            tooltip=[x_cluster, y_cluster, "cluster"]
+        ).properties(title="KMeans Clustering", width=600, height=400)
+        st.altair_chart(cluster_chart, use_container_width=True)
+    else:
+        st.write("Not enough numeric columns for clustering.")
+    # --- Predictive Modeling ---
+    if "is_fan" in df_clean.columns:
+        st.subheader("Predictive Modeling: Logistic Regression")
+        df_model = df_clean.copy().dropna(subset=["is_fan"])
+        # Create a binary target from 'is_fan'
+        df_model["is_fan_binary"] = df_model["is_fan"].apply(lambda x: 1 if str(x).strip().lower() == "yes" else 0)
+        predictors = list(df_model.select_dtypes(include=["number"]).columns)
+        if predictors:
+            selected_predictors = st.multiselect("Select Predictors", options=predictors, default=predictors)
+            if selected_predictors:
+                X = df_model[selected_predictors].dropna()
+                y = df_model.loc[X.index, "is_fan_binary"]
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+                model = LogisticRegression(max_iter=1000)
+                model.fit(X_train, y_train)
+                y_pred = model.predict(X_test)
+                acc = accuracy_score(y_test, y_pred)
+                st.write(f"**Accuracy:** {acc:.2f}")
+                st.text("Classification Report:")
+                st.text(classification_report(y_test, y_pred))
+                # ROC Curve
+                y_prob = model.predict_proba(X_test)[:, 1]
+                fpr, tpr, _ = roc_curve(y_test, y_prob)
+                roc_auc = auc(fpr, tpr)
+                fig, ax = plt.subplots()
+                ax.plot(fpr, tpr, label=f"ROC curve (area = {roc_auc:.2f})")
+                ax.plot([0, 1], [0, 1], linestyle="--", color="gray")
+                ax.set_xlabel("False Positive Rate")
+                ax.set_ylabel("True Positive Rate")
+                ax.set_title("ROC Curve")
+                ax.legend()
+                st.pyplot(fig)
+        else:
+            st.write("No numeric predictors available for predictive modeling.")
+    else:
+        st.write("Column 'is_fan' not found.")
+
+# =========================
+# TAB 6: Enhanced Dashboard & Export
+# =========================
+with main_tabs[5]:
+    st.header("Enhanced Dashboard & Data Export")
+    df_dashboard = df_clean.copy()
+    # Add some filters similar to the Exploration tab
+    if "Gender" in df_dashboard.columns:
+        genders = sorted(df_dashboard["Gender"].unique().tolist())
+        selected_genders = st.multiselect("Select Gender(s):", options=genders, default=genders)
+        df_dashboard = df_dashboard[df_dashboard["Gender"].isin(selected_genders)]
+    if "Age" in df_dashboard.columns:
+        ages = sorted(df_dashboard["Age"].unique().tolist())
+        selected_ages = st.multiselect("Select Age Group(s):", options=ages, default=ages)
+        df_dashboard = df_dashboard[df_dashboard["Age"].isin(selected_ages)]
+    st.markdown("#### Filtered Data")
+    st.dataframe(df_dashboard)
+    csv_data = df_dashboard.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        label="Download Filtered Data as CSV",
+        data=csv_data,
+        file_name="filtered_data.csv",
+        mime="text/csv"
+    )
+
+# =========================
+# TAB 7: Geospatial Visualization
+# =========================
+with main_tabs[6]:
+    st.header("Geospatial Visualization")
+    if "Location (Census Region)" in df_clean.columns:
+        # Define dummy coordinates for known Census Regions
+        region_coords = {
+            "New England": {"lat": 42.0, "lon": -71.0},
+            "Mid-Atlantic": {"lat": 40.0, "lon": -74.0},
+            "East North Central": {"lat": 41.0, "lon": -87.0},
+            "West North Central": {"lat": 39.0, "lon": -95.0},
+            "South Atlantic": {"lat": 33.0, "lon": -80.0},
+            "East South Central": {"lat": 32.0, "lon": -85.0},
+            "West South Central": {"lat": 31.0, "lon": -100.0},
+            "Mountain": {"lat": 39.0, "lon": -105.0},
+            "Pacific": {"lat": 37.0, "lon": -120.0}
+        }
+        df_geo = df_clean.copy()
+        df_geo = df_geo[df_geo["Location (Census Region)"].isin(region_coords.keys())]
+        df_geo["lat"] = df_geo["Location (Census Region)"].apply(lambda x: region_coords[x]["lat"])
+        df_geo["lon"] = df_geo["Location (Census Region)"].apply(lambda x: region_coords[x]["lon"])
+        st.map(df_geo[["lat", "lon"]])
+    else:
+        st.write("No 'Location (Census Region)' column found.")
+
+# =========================
+# TAB 8: User Guide & Feedback
+# =========================
+with main_tabs[7]:
+    st.header("User Guide & Feedback")
+    st.markdown("""
+    ### User Guide
+    - **Data Cleaning:** Clean your survey data by dropping extraneous columns, renaming verbose columns, and handling missing values.
+    - **Basic Visualization:** Explore initial charts on fan status, film viewing, demographics, film ranking, and character opinions.
+    - **Interactive Data Exploration:** Filter the data interactively and view descriptive statistics.
+    - **Advanced Statistical Analysis:** Use scatter plot matrices and regression analysis to uncover relationships between numeric variables.
+    - **Clustering & Predictive Modeling:** Perform KMeans clustering and build a logistic regression model to predict fan status.
+    - **Enhanced Dashboard & Export:** Apply filters and download the resulting data as CSV.
+    - **Geospatial Visualization:** Visualize survey responses by mapping Census Regions.
+    - **User Guide & Feedback:** Read instructions and submit your feedback.
+    """)
+    feedback = st.text_area("Your Feedback:", "")
+    if st.button("Submit Feedback"):
+        st.success("Thank you for your feedback!")
+        # Optionally, you could write feedback to a file or database here.
