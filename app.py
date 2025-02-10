@@ -3,7 +3,10 @@ import pandas as pd
 import altair as alt
 
 # Set page configuration
-st.set_page_config(page_title="Star Wars Data Cleaning, Visualization & Exploration", layout="wide")
+st.set_page_config(
+    page_title="Star Wars Data Cleaning, Visualization & Exploration",
+    layout="wide"
+)
 st.title("Star Wars Survey Data Cleaning, Visualization & Exploration App")
 
 # =============================================================================
@@ -51,7 +54,7 @@ df_raw = load_data(data_path)
 if df_raw is None:
     st.stop()
 
-# Make a copy for cleaning and further processing
+# Create a copy for cleaning and further processing
 df_clean = df_raw.copy()
 
 # =============================================================================
@@ -82,6 +85,7 @@ with main_tabs[0]:
     # --- Tab 2: Drop Unwanted Columns ---
     with cleaning_tabs[1]:
         st.header("Drop Unwanted Columns")
+        # Identify columns that start with 'Unnamed' (often extra or blank columns)
         unnamed_cols = [col for col in df_clean.columns if col.startswith("Unnamed")]
         st.write("Columns to drop:", unnamed_cols)
         df_clean = df_clean.drop(columns=unnamed_cols)
@@ -265,6 +269,12 @@ with main_tabs[1]:
 with main_tabs[2]:
     st.header("Interactive Data Filtering & Advanced Statistical Analysis")
     st.markdown("### Filter the Data")
+    
+    # --- Ensure known categorical columns are cast to string to avoid pyarrow conversion issues ---
+    categorical_cols = ["seen_films", "is_fan", "films_seen", "character_opinions"]
+    for col in categorical_cols:
+        if col in df_clean.columns:
+            df_clean[col] = df_clean[col].astype(str)
     
     # Start with the cleaned data
     df_filtered = df_clean.copy()
