@@ -69,7 +69,6 @@ df_clean = df_raw.copy()
 main_tab_labels = [
     "Data Cleaning",
     "Basic Visualization",
-    "Interactive Data Exploration",
     "Advanced Statistical Analysis",
     "Clustering & Predictive Modeling",
     "Enhanced Dashboard & Export",
@@ -228,29 +227,9 @@ with main_tabs[1]:
             st.write("Column 'character_opinions' not found.")
 
 # =========================
-# TAB 3: Interactive Data Exploration
+# TAB 3: Advanced Statistical Analysis
 # =========================
 with main_tabs[2]:
-    st.header("Interactive Data Exploration")
-    df_explore = df_clean.copy()
-    # Example filters (you can expand as needed)
-    if "Gender" in df_explore.columns:
-        genders = sorted(df_explore["Gender"].unique().tolist())
-        selected_genders = st.multiselect("Select Gender(s):", options=genders, default=genders)
-        df_explore = df_explore[df_explore["Gender"].isin(selected_genders)]
-    if "Age" in df_explore.columns:
-        ages = sorted(df_explore["Age"].unique().tolist())
-        selected_ages = st.multiselect("Select Age Group(s):", options=ages, default=ages)
-        df_explore = df_explore[df_explore["Age"].isin(selected_ages)]
-    st.markdown("#### Filtered Data")
-    st.dataframe(df_explore)
-    st.markdown("#### Descriptive Statistics")
-    st.dataframe(df_explore.describe(include='all'))
-
-# =========================
-# TAB 4: Advanced Statistical Analysis
-# =========================
-with main_tabs[3]:
     st.header("Advanced Statistical Analysis")
     # --- Pairplot for Numeric Variables ---
     numeric_cols = df_clean.select_dtypes(include=["number"]).columns
@@ -264,14 +243,11 @@ with main_tabs[3]:
     if len(numeric_cols) >= 2:
         st.subheader("Linear Regression Analysis")
         x_col = st.selectbox("Select X Variable", options=numeric_cols)
-        # Ensure a different default for y
         default_y = numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0]
         y_col = st.selectbox("Select Y Variable", options=numeric_cols, index=list(numeric_cols).index(default_y))
         if x_col and y_col and x_col != y_col:
-            # Compute linear regression
             res = linregress(df_clean[x_col].dropna(), df_clean[y_col].dropna())
             st.write(f"**Slope:** {res.slope:.2f}, **Intercept:** {res.intercept:.2f}, **R-squared:** {res.rvalue**2:.2f}")
-            # Plot scatter with regression line
             fig, ax = plt.subplots()
             ax.scatter(df_clean[x_col], df_clean[y_col], alpha=0.5)
             x_vals = np.array(ax.get_xlim())
@@ -285,9 +261,9 @@ with main_tabs[3]:
         st.write("Not enough numeric columns for regression analysis.")
 
 # =========================
-# TAB 5: Clustering & Predictive Modeling
+# TAB 4: Clustering & Predictive Modeling
 # =========================
-with main_tabs[4]:
+with main_tabs[3]:
     st.header("Clustering & Predictive Modeling")
     # --- Clustering ---
     if len(numeric_cols) >= 2:
@@ -312,7 +288,6 @@ with main_tabs[4]:
     if "is_fan" in df_clean.columns:
         st.subheader("Predictive Modeling: Logistic Regression")
         df_model = df_clean.copy().dropna(subset=["is_fan"])
-        # Create a binary target from 'is_fan'
         df_model["is_fan_binary"] = df_model["is_fan"].apply(lambda x: 1 if str(x).strip().lower() == "yes" else 0)
         predictors = list(df_model.select_dtypes(include=["number"]).columns)
         if predictors:
@@ -328,7 +303,6 @@ with main_tabs[4]:
                 st.write(f"**Accuracy:** {acc:.2f}")
                 st.text("Classification Report:")
                 st.text(classification_report(y_test, y_pred))
-                # ROC Curve
                 y_prob = model.predict_proba(X_test)[:, 1]
                 fpr, tpr, _ = roc_curve(y_test, y_prob)
                 roc_auc = auc(fpr, tpr)
@@ -346,12 +320,11 @@ with main_tabs[4]:
         st.write("Column 'is_fan' not found.")
 
 # =========================
-# TAB 6: Enhanced Dashboard & Export
+# TAB 5: Enhanced Dashboard & Export
 # =========================
-with main_tabs[5]:
+with main_tabs[4]:
     st.header("Enhanced Dashboard & Data Export")
     df_dashboard = df_clean.copy()
-    # Add some filters similar to the Exploration tab
     if "Gender" in df_dashboard.columns:
         genders = sorted(df_dashboard["Gender"].unique().tolist())
         selected_genders = st.multiselect("Select Gender(s):", options=genders, default=genders)
@@ -371,12 +344,12 @@ with main_tabs[5]:
     )
 
 # =========================
-# TAB 7: Geospatial Visualization
+# TAB 6: Geospatial Visualization
 # =========================
-with main_tabs[6]:
+with main_tabs[5]:
     st.header("Geospatial Visualization")
     if "Location (Census Region)" in df_clean.columns:
-        # Define dummy coordinates for known Census Regions
+        # Dummy coordinates for known Census Regions
         region_coords = {
             "New England": {"lat": 42.0, "lon": -71.0},
             "Mid-Atlantic": {"lat": 40.0, "lon": -74.0},
@@ -397,15 +370,14 @@ with main_tabs[6]:
         st.write("No 'Location (Census Region)' column found.")
 
 # =========================
-# TAB 8: User Guide & Feedback
+# TAB 7: User Guide & Feedback
 # =========================
-with main_tabs[7]:
+with main_tabs[6]:
     st.header("User Guide & Feedback")
     st.markdown("""
     ### User Guide
     - **Data Cleaning:** Clean your survey data by dropping extraneous columns, renaming verbose columns, and handling missing values.
     - **Basic Visualization:** Explore initial charts on fan status, film viewing, demographics, film ranking, and character opinions.
-    - **Interactive Data Exploration:** Filter the data interactively and view descriptive statistics.
     - **Advanced Statistical Analysis:** Use scatter plot matrices and regression analysis to uncover relationships between numeric variables.
     - **Clustering & Predictive Modeling:** Perform KMeans clustering and build a logistic regression model to predict fan status.
     - **Enhanced Dashboard & Export:** Apply filters and download the resulting data as CSV.
@@ -415,4 +387,4 @@ with main_tabs[7]:
     feedback = st.text_area("Your Feedback:", "")
     if st.button("Submit Feedback"):
         st.success("Thank you for your feedback!")
-        # Optionally, you could write feedback to a file or database here.
+        # You could add code here to log feedback to a file or database.
