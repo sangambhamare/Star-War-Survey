@@ -4,7 +4,6 @@ import altair as alt
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import linregress
 from sklearn.cluster import KMeans
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
@@ -69,7 +68,7 @@ df_clean = df_raw.copy()
 main_tab_labels = [
     "Data Cleaning",
     "Basic Visualization",
-    "Advanced Statistical Analysis",
+    "Basic Statistical Reports",
     "Clustering & Predictive Modeling",
     "Enhanced Dashboard & Export",
     "Geospatial Visualization",
@@ -98,7 +97,6 @@ with main_tabs[0]:
     # --- Drop Unwanted Columns ---
     with cleaning_tabs[1]:
         st.subheader("Drop Unwanted Columns")
-        # Drop columns that start with "Unnamed"
         unnamed_cols = [col for col in df_clean.columns if col.startswith("Unnamed")]
         st.write("Columns to drop:", unnamed_cols)
         df_clean = df_clean.drop(columns=unnamed_cols)
@@ -227,38 +225,22 @@ with main_tabs[1]:
             st.write("Column 'character_opinions' not found.")
 
 # =========================
-# TAB 3: Advanced Statistical Analysis
+# TAB 3: Basic Statistical Reports
 # =========================
 with main_tabs[2]:
-    st.header("Advanced Statistical Analysis")
-    # --- Pairplot for Numeric Variables ---
+    st.header("Basic Statistical Reports")
+    st.markdown("### Descriptive Statistics")
+    st.dataframe(df_clean.describe(include='all'))
+    
+    st.markdown("### Histograms for Numeric Variables")
     numeric_cols = df_clean.select_dtypes(include=["number"]).columns
-    if len(numeric_cols) >= 2:
-        st.subheader("Scatter Plot Matrix")
-        pair_grid = sns.pairplot(df_clean[numeric_cols].dropna())
-        st.pyplot(pair_grid.fig)
-    else:
-        st.write("Not enough numeric columns for a pairplot.")
-    # --- Regression Analysis ---
-    if len(numeric_cols) >= 2:
-        st.subheader("Linear Regression Analysis")
-        x_col = st.selectbox("Select X Variable", options=numeric_cols)
-        default_y = numeric_cols[1] if len(numeric_cols) > 1 else numeric_cols[0]
-        y_col = st.selectbox("Select Y Variable", options=numeric_cols, index=list(numeric_cols).index(default_y))
-        if x_col and y_col and x_col != y_col:
-            res = linregress(df_clean[x_col].dropna(), df_clean[y_col].dropna())
-            st.write(f"**Slope:** {res.slope:.2f}, **Intercept:** {res.intercept:.2f}, **R-squared:** {res.rvalue**2:.2f}")
-            fig, ax = plt.subplots()
-            ax.scatter(df_clean[x_col], df_clean[y_col], alpha=0.5)
-            x_vals = np.array(ax.get_xlim())
-            y_vals = res.intercept + res.slope * x_vals
-            ax.plot(x_vals, y_vals, color="red", linestyle="--")
-            ax.set_xlabel(x_col)
-            ax.set_ylabel(y_col)
-            ax.set_title(f"Regression: {y_col} vs {x_col}")
-            st.pyplot(fig)
-    else:
-        st.write("Not enough numeric columns for regression analysis.")
+    for col in numeric_cols:
+        fig, ax = plt.subplots()
+        ax.hist(df_clean[col].dropna(), bins=20, color="skyblue", edgecolor="black")
+        ax.set_title(f"Histogram of {col}")
+        ax.set_xlabel(col)
+        ax.set_ylabel("Frequency")
+        st.pyplot(fig)
 
 # =========================
 # TAB 4: Clustering & Predictive Modeling
@@ -295,6 +277,7 @@ with main_tabs[3]:
             if selected_predictors:
                 X = df_model[selected_predictors].dropna()
                 y = df_model.loc[X.index, "is_fan_binary"]
+                from sklearn.model_selection import train_test_split
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
                 model = LogisticRegression(max_iter=1000)
                 model.fit(X_train, y_train)
@@ -378,7 +361,7 @@ with main_tabs[6]:
     ### User Guide
     - **Data Cleaning:** Clean your survey data by dropping extraneous columns, renaming verbose columns, and handling missing values.
     - **Basic Visualization:** Explore initial charts on fan status, film viewing, demographics, film ranking, and character opinions.
-    - **Advanced Statistical Analysis:** Use scatter plot matrices and regression analysis to uncover relationships between numeric variables.
+    - **Basic Statistical Reports:** View descriptive statistics and histograms for numeric variables.
     - **Clustering & Predictive Modeling:** Perform KMeans clustering and build a logistic regression model to predict fan status.
     - **Enhanced Dashboard & Export:** Apply filters and download the resulting data as CSV.
     - **Geospatial Visualization:** Visualize survey responses by mapping Census Regions.
@@ -387,4 +370,4 @@ with main_tabs[6]:
     feedback = st.text_area("Your Feedback:", "")
     if st.button("Submit Feedback"):
         st.success("Thank you for your feedback!")
-        # You could add code here to log feedback to a file or database.
+        # Optionally, you could log the feedback to a file or database.
