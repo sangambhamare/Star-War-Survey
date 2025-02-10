@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import io  # Import io to create a file-like object for StringIO
 
 # Set the page configuration
 st.set_page_config(page_title="Star Wars Survey Data Cleaning", layout="wide")
@@ -57,9 +58,9 @@ with tabs[0]:
     st.dataframe(df_raw.head(10))
     
     st.subheader("Data Information")
-    buffer = []
+    buffer = io.StringIO()  # Create a file-like object to capture the info
     df_raw.info(buf=buffer)
-    st.text("\n".join(buffer))
+    st.text(buffer.getvalue())
 
 # -------------------------------
 # Tab 2: Drop Unwanted Columns
@@ -130,6 +131,6 @@ with tabs[4]:
     st.dataframe(df_clean.head(10))
     
     st.subheader("Data Information")
-    buffer = []
+    buffer = io.StringIO()  # Use StringIO again to capture the info
     df_clean.info(buf=buffer)
-    st.text("\n".join(buffer))
+    st.text(buffer.getvalue())
