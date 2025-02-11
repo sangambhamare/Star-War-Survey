@@ -4,10 +4,6 @@ import altair as alt
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
-from sklearn.cluster import KMeans
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, accuracy_score, roc_curve, auc
 
 # -------------------------
 # Page Configuration
@@ -59,8 +55,16 @@ df_raw = load_data(data_path)
 if df_raw is None:
     st.stop()
 
+# Remove RespondentID from the raw data if present
+if "RespondentID" in df_raw.columns:
+    df_raw = df_raw.drop(columns=["RespondentID"])
+
 # Work on a copy for cleaning and further analysis
 df_clean = df_raw.copy()
+
+# Remove RespondentID from df_clean if present (should be already removed)
+if "RespondentID" in df_clean.columns:
+    df_clean = df_clean.drop(columns=["RespondentID"])
 
 # -------------------------
 # Main Tabs
@@ -304,5 +308,4 @@ with main_tabs[5]:
     - **Enhanced Dashboard & Export:** Apply filters and download the resulting data as CSV.
     - **Geospatial Visualization:** Visualize survey responses by mapping Census Regions.
     """)
-    
-st.markdown("#### Developed by Mr. Sangam S Bhamare 2025")
+    st.markdown("#### Developed by Mr. Sangam S Bhamare 2025")
